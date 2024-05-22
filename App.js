@@ -1,4 +1,4 @@
-import {StyleSheet, Text, View} from 'react-native';
+import {Button, StyleSheet, Text, View, TextInput} from 'react-native';
 import {QueryClient, QueryClientProvider, useQuery} from "@tanstack/react-query";
 import {useState} from "react";
 
@@ -6,14 +6,12 @@ import {useState} from "react";
 
 // Fetching all posts
 const getBlogPost = async () => {
-    const response = await fetch('https://jsonplaceholder.typicode.com/posts')
-    return response.json()
-}
-
-// Fetching post by id
-const getBlogById = async (id) => {
-    const response = await fetch(`https://jsonplaceholder.typicode.com/post/${id}`);
-    return response.json()
+    const response = (await fetch('https://jsonplaceholder.typicode.com/posts')).then(res => {
+        if(!res.ok) {
+            throw new Error("Network response was not ok");
+        };
+        return res.json();
+    })
 }
 
 // Creating a Post
@@ -79,7 +77,7 @@ const filterBlogPost = async (userId) => {
 
 export default function App() {
     const queryClient = new QueryClient()
-    const [selectedId, setSelectedId] = useState('')
+    const [selectedId, setSelectedId] = useState(1)
     const handleClick = (id) => {
         setSelectedId(id)
     }
@@ -88,15 +86,39 @@ export default function App() {
     return (
         <QueryClientProvider client={queryClient}>
             <View style={styles.container}>
-                <Blogs handleDogClick={handleDogClicked}/>  
-                <Dog dogId={selectedId}/>
+                <Blogs handleClick={handleClick}/>  
+                <NewBlog />
             </View>
         </QueryClientProvider>
     );
 }
 
-const Blogs = ({handleDogClick}) => {
-    const {data: posts, isLoading: postsLoading, isError: postsError} = useQuery({queryKey: ['posts'], queryFn: getBlogPost})
+//<Dog dogId={selectedId}/>
+
+const NewBlog = () => {
+    const [title, setTitle] = useState("");
+    const [content, setContent] = useState("");
+
+    return (
+        <View>
+            <TextInput
+                value = {title}
+                onChangeText={setTitle}
+                placeholder="write blog title"
+            />
+            <TextInput
+                value = {content}
+                onChangeText={setContent}
+                placeholder="write blog content"
+            />
+            <Button title="Add new post" onPress={createBlogPost(1, title, content)} />
+        </View>
+
+    );
+}
+
+const Blogs = ({handleClick}) => {
+    const {data: posts, isLoading: postsLoading, isError: postsError} = useQuery({queryKey: ['id'], queryFn: getBlogPost})
     if (postsLoading) {
         return (
             <Text>Loading...</Text>
@@ -111,7 +133,7 @@ const Blogs = ({handleDogClick}) => {
         <View>
             <Text style={styles.heading}>Blog Posts</Text>
             {
-                posts.data.map(d => <Text onPress={() => handleClick(d.id)} key={d.id}>{d.attributes.name}</Text>)
+                posts.map(d => <Text onPress={() => handleClick(d.id)} key={d.id}>{d.title}</Text>)
             }
         </View>
     )
@@ -122,9 +144,6 @@ const styles = StyleSheet.create({
         backgroundColor: '#d0d0c0',
         alignItems: 'center',
         justifyContent: 'center',
-    },
-    dog: {
-        width: '50%'
     },
     heading: {
         fontSize: 30,
